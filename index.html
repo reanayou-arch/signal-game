@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Последний сигнал</title>
+
+<style>
+body{
+  margin:0;
+  background:#0a0a0a;
+  color:#e5e5e5;
+  font-family:"Courier New",monospace;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  padding:10px;
+}
+#game{
+  width:100%;
+  max-width:720px;
+  background:#121212;
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 0 30px rgba(0,0,0,.9);
+}
+.text{
+  white-space:pre-line;
+  font-size:clamp(14px,4vw,18px);
+  line-height:1.55;
+}
+button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  font-size:clamp(14px,4vw,17px);
+  background:#1c1c1c;
+  color:#e5e5e5;
+  border:1px solid #333;
+  border-radius:8px;
+}
+#musicBtn{
+  background:#262626;
+  margin-bottom:10px;
+}
+</style>
+</head>
+<body>
+
+<div id="game">
+  <button id="musicBtn">🎵 Включить музыку</button>
+  <div class="text" id="text"></div>
+  <div id="choices"></div>
+</div>
+
+<audio id="bgm" loop>
+  <source src="music.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="click">
+  <source src="click.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const textEl=document.getElementById("text");
+const choicesEl=document.getElementById("choices");
+const bgm=document.getElementById("bgm");
+const click=document.getElementById("click");
+const musicBtn=document.getElementById("musicBtn");
+
+let musicOn=false;
+
+musicBtn.onclick=()=>{
+  if(!musicOn){
+    bgm.volume=0.5;
+    bgm.play();
+    musicBtn.textContent="🔇 Выключить музыку";
+    musicOn=true;
+  }else{
+    bgm.pause();
+    musicBtn.textContent="🎵 Включить музыку";
+    musicOn=false;
+  }
+};
+
+function playClick(){
+  click.currentTime=0;
+  click.play();
+}
+
+function show(text,choices){
+  textEl.textContent=text;
+  choicesEl.innerHTML="";
+  choices.forEach(c=>{
+    const b=document.createElement("button");
+    b.textContent=c.text;
+    b.onclick=()=>{
+      playClick();
+      c.action();
+    };
+    choicesEl.appendChild(b);
+  });
+}
+
+function start(){
+show(
+`Ты просыпаешься в тёмной комнате.
+Часы показывают 03:17.
+
+Рядом:
+— телефон
+— дверь без ручки
+— окно с пустотой
+
+Телефон загорается:
+«Ты не должен был отвечать.»`,
+[
+{text:"Посмотреть в окно",action:windowScene},
+{text:"Взять телефон",action:phoneScene},
+{text:"Осмотреть дверь",action:doorScene}
+]);}
+
+function windowScene(){
+show(
+`Стекла нет.
+В отражении — ты.
+
+Но отражение
+не повторяет движений.
+
+Оно прикладывает палец к губам.
+
+Телефон вибрирует:
+«Он уже увидел тебя.»`,
+[
+{text:"Обернуться к телефону",action:phoneScene}
+]);}
+
+function phoneScene(){
+show(
+`Имя собеседника: «Ты».
+
+«Не смотри назад.
+Дверь можно открыть
+только один раз.»`,
+[
+{text:"Пойти к двери",action:doorScene},
+{text:"Обернуться",action:badEnding}
+]);}
+
+function doorScene(){
+show(
+`Ты прикладываешь руку.
+
+«ЧТО ТЫ ГОТОВ
+ОСТАВИТЬ ЗДЕСЬ?»`,
+[
+{text:"Оставить зрение",action:badEnding},
+{text:"Оставить воспоминания",action:badEnding},
+{text:"Оставить голос",action:goodEnding}
+]);}
+
+function badEnding(){
+show(
+`Ты ошибся.
+
+Тьма приближается.
+Игра окончена.`,
+[
+{text:"Начать заново",action:start}
+]);}
+
+function goodEnding(){
+show(
+`Голос исчезает.
+Дверь открывается.
+
+03:18.
+
+Ты вышел.
+Но игра
+ещё не закончилась…`,
+[
+{text:"Начать заново",action:start}
+]);}
+
+start();
+</script>
+</body>
+</html>
