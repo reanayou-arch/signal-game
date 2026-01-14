@@ -6,270 +6,188 @@
 <title>LINEA</title>
 
 <style>
-body{
-  margin:0;
-  background:#0b0b0b;
-  font-family:system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color:#e5e5e5;
-}
-#app{
-  max-width:420px;
-  margin:0 auto;
-  height:100vh;
-  background:#111;
-  display:flex;
-}
+body{margin:0;background:#0b0b0b;color:#e5e5e5;font-family:system-ui}
+#app{max-width:420px;height:100vh;margin:0 auto;background:#111;display:flex;flex-direction:column}
 
-/* ===== SIDEBAR ===== */
-#chats{
-  width:110px;
-  background:#0f0f0f;
-  border-right:1px solid #222;
-  overflow-y:auto;
-}
-.chatItem{
-  padding:10px;
-  text-align:center;
-  cursor:pointer;
-  border-bottom:1px solid #1a1a1a;
-}
-.avatar{
-  width:36px;
-  height:36px;
-  border-radius:50%;
-  margin:0 auto 6px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:600;
-  color:#000;
-}
-.chatName{
-  font-size:11px;
-  opacity:.8;
-}
+/* header */
+#header{padding:14px;text-align:center;background:#1a1a1a;border-bottom:1px solid #222;font-weight:600}
 
-/* ===== CHAT ===== */
-#chatView{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-}
-#header{
-  padding:12px;
-  background:#1a1a1a;
-  border-bottom:1px solid #222;
-  font-weight:600;
-}
-#messages{
-  flex:1;
-  padding:12px;
-  overflow-y:auto;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.msg{
-  max-width:80%;
-  padding:10px 12px;
-  border-radius:12px;
-  font-size:14px;
-  line-height:1.4;
-}
+/* screens */
+.screen{flex:1;display:none}
+.screen.active{display:flex;flex-direction:column}
+
+/* chat list */
+.chatItem{display:flex;gap:10px;padding:12px;border-bottom:1px solid #1f1f1f;cursor:pointer}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;color:#000}
+.chatInfo{flex:1}
+.chatName{font-weight:500}
+.chatPreview{font-size:13px;opacity:.7}
+
+/* chat view */
+#chatHeader{display:flex;gap:10px;align-items:center;padding:12px;border-bottom:1px solid #222}
+#messages{flex:1;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:80%;padding:10px 12px;border-radius:12px;font-size:14px}
 .you{align-self:flex-end;background:#3a3a3a}
 .other{align-self:flex-start;background:#1f1f2f}
-.system{
-  align-self:center;
-  font-size:12px;
-  opacity:.6;
-}
+.system{align-self:center;font-size:12px;opacity:.6}
+#typing{padding:6px 12px;font-size:12px;opacity:.6;display:none}
+#choices{padding:10px;border-top:1px solid #222}
+.choice{width:100%;padding:10px;margin-top:6px;background:#1e1e1e;color:#fff;border:none;border-radius:8px}
 
-/* typing */
-#typing{
-  padding:8px 12px;
-  font-size:12px;
-  opacity:.6;
-  display:none;
-}
-
-/* choices */
-#choices{
-  padding:10px;
-  border-top:1px solid #222;
-}
-.choice{
-  width:100%;
-  padding:10px;
-  margin-top:6px;
-  background:#1e1e1e;
-  color:#fff;
-  border:none;
-  border-radius:8px;
-}
-
-/* effects */
-@keyframes shake{
-  0%{transform:translate(0,0)}
-  25%{transform:translate(-2px,1px)}
-  50%{transform:translate(2px,-1px)}
-  75%{transform:translate(-1px,2px)}
-  100%{transform:translate(0,0)}
-}
-.shake{animation:shake .4s infinite}
+/* mode screen */
+.modeBtn{margin:20px;padding:14px;background:#1e1e1e;border:none;border-radius:10px;color:#fff;font-size:16px}
 </style>
 </head>
 <body>
 
 <div id="app">
-  <div id="chats"></div>
+  <div id="header">LINEA</div>
 
-  <div id="chatView">
-    <div id="header">LINEA</div>
+  <!-- MODE -->
+  <div id="modeScreen" class="screen active">
+    <button class="modeBtn" onclick="setMode('free')">Свободный ввод</button>
+    <button class="modeBtn" onclick="setMode('choices')">Готовые ответы</button>
+  </div>
+
+  <!-- CHAT LIST -->
+  <div id="listScreen" class="screen"></div>
+
+  <!-- CHAT -->
+  <div id="chatScreen" class="screen">
+    <div id="chatHeader">
+      <span onclick="back()">←</span>
+      <span id="chatTitle"></span>
+    </div>
     <div id="messages"></div>
     <div id="typing">печатает…</div>
     <div id="choices"></div>
   </div>
 </div>
 
-<audio id="notif" src="click.mp3"></audio>
-
 <script>
 /* ===== STATE ===== */
-let state={
-  flags:{answeredUnknown:false},
-  currentChat:null
+let state=JSON.parse(localStorage.getItem("linea"))||{
+  act:1,
+  mode:null
 };
 
-const chatsData={
-  unknown:{
-    name:"Неизвестный",
-    color:"#ff6b6b",
-    messages:[
-      {from:"system",text:"03:17"},
-      {from:"other",text:"Ты снова здесь."}
-    ]
-  },
-  anya:{
-    name:"Аня",
-    color:"#6bc5ff",
-    messages:[
-      {from:"system",text:"2 года назад"},
-      {from:"other",text:"Если вдруг прочтёшь — не отвечай им."}
-    ]
-  },
-  archive:{
-    name:"Архив",
-    color:"#aaa",
-    messages:[
-      {from:"system",text:"Служебные сообщения"},
-      {from:"system",text:"Аккаунт восстановлен"}
-    ]
-  }
+/* ===== DATA ===== */
+const chats={
+  archive:{name:"Архив",color:"#aaa",messages:[
+    {from:"system",text:"Аккаунт восстановлен."},
+    {from:"system",text:"Последний вход: 03:17"}
+  ]},
+  unknown:{name:"Неизвестный",color:"#ff6b6b",messages:[
+    {from:"other",text:"Ты всё-таки вернулся."}
+  ]},
+  anya:{name:"Аня",color:"#6bc5ff",messages:[
+    {from:"system",text:"2 года назад"},
+    {from:"other",text:"Если вдруг прочтёшь — не отвечай им."}
+  ]}
 };
 
-const chatsEl=document.getElementById("chats");
-const header=document.getElementById("header");
-const messages=document.getElementById("messages");
-const choices=document.getElementById("choices");
-const typing=document.getElementById("typing");
-const notif=document.getElementById("notif");
+/* ===== ELEMENTS ===== */
+const modeScreen=document.getElementById("modeScreen");
+const listScreen=document.getElementById("listScreen");
+const chatScreen=document.getElementById("chatScreen");
+const messagesEl=document.getElementById("messages");
+const choicesEl=document.getElementById("choices");
+const typingEl=document.getElementById("typing");
+const chatTitle=document.getElementById("chatTitle");
+
+/* ===== MODE ===== */
+function setMode(m){
+  state.mode=m;
+  save();
+  showList();
+}
 
 /* ===== UI ===== */
-function renderChats(){
-  chatsEl.innerHTML="";
-  Object.keys(chatsData).forEach(id=>{
-    const c=chatsData[id];
+function save(){localStorage.setItem("linea",JSON.stringify(state));}
+
+function showList(){
+  modeScreen.classList.remove("active");
+  chatScreen.classList.remove("active");
+  listScreen.classList.add("active");
+  listScreen.innerHTML="";
+  Object.keys(chats).forEach(id=>{
+    const c=chats[id];
     const div=document.createElement("div");
     div.className="chatItem";
     div.onclick=()=>openChat(id);
-
-    const av=document.createElement("div");
-    av.className="avatar";
-    av.style.background=c.color;
-    av.textContent=c.name[0];
-
-    const name=document.createElement("div");
-    name.className="chatName";
-    name.textContent=c.name;
-
-    div.append(av,name);
-    chatsEl.appendChild(div);
+    div.innerHTML=`
+      <div class="avatar" style="background:${c.color}">${c.name[0]}</div>
+      <div class="chatInfo">
+        <div class="chatName">${c.name}</div>
+        <div class="chatPreview">${c.messages.at(-1).text}</div>
+      </div>`;
+    listScreen.appendChild(div);
   });
 }
 
 function openChat(id){
-  state.currentChat=id;
-  const chat=chatsData[id];
-  header.textContent=chat.name;
-  messages.innerHTML="";
-  choices.innerHTML="";
-  typing.style.display="none";
+  listScreen.classList.remove("active");
+  chatScreen.classList.add("active");
+  messagesEl.innerHTML="";
+  choicesEl.innerHTML="";
+  chatTitle.textContent=chats[id].name;
+  chats[id].messages.forEach(m=>addMsg(m.text,m.from));
+  act1(id);
+}
 
-  chat.messages.forEach(m=>addMsg(m.text,m.from));
-  messages.scrollTop=messages.scrollHeight;
-
-  storyRouter(id);
+function back(){
+  chatScreen.classList.remove("active");
+  showList();
 }
 
 function addMsg(text,from){
-  const div=document.createElement("div");
-  div.className="msg "+from;
-  div.textContent=text;
-  messages.appendChild(div);
-  messages.scrollTop=messages.scrollHeight;
+  const d=document.createElement("div");
+  d.className="msg "+from;
+  d.textContent=text;
+  messagesEl.appendChild(d);
+  messagesEl.scrollTop=messagesEl.scrollHeight;
 }
 
-function showTyping(time=1000){
-  typing.style.display="block";
-  setTimeout(()=>typing.style.display="none",time);
+function showTyping(ms){
+  typingEl.style.display="block";
+  setTimeout(()=>typingEl.style.display="none",ms);
 }
 
-function addChoice(text,action){
+function choice(text,fn){
   const b=document.createElement("button");
   b.className="choice";
   b.textContent=text;
   b.onclick=()=>{
     addMsg(text,"you");
-    choices.innerHTML="";
-    action();
+    choicesEl.innerHTML="";
+    fn();
   };
-  choices.appendChild(b);
+  choicesEl.appendChild(b);
 }
 
-/* ===== STORY LOGIC ===== */
-function storyRouter(id){
-  if(id==="unknown" && !state.flags.answeredUnknown){
-    addChoice("Кто ты?",()=>{
-      state.flags.answeredUnknown=true;
+/* ===== ACT 1 ===== */
+function act1(id){
+  if(id==="unknown"){
+    choice("Кто ты?",()=>{
       showTyping(1200);
-      setTimeout(()=>{
-        addMsg("Ты уже задавал этот вопрос.","other");
-        notif.play();
-        chatsData.anya.messages.push(
-          {from:"other",text:"Он написал тебе, да?"}
-        );
-        renderChats();
-      },1200);
+      setTimeout(()=>addMsg("Ты уже задавал этот вопрос.","other"),1200);
     });
-    addChoice("Молчать",()=>{
-      addMsg("…","you");
-    });
+    if(state.mode==="choices") choice("…",()=>{});
   }
-
   if(id==="anya"){
-    addChoice("Что ты имеешь в виду?",()=>{
+    choice("Кто написал?",()=>{
       showTyping(1000);
       setTimeout(()=>{
-        addMsg("LINEA не закрыли.","other");
-        addMsg("Просто убрали тех, кто отвечал.","other");
+        addMsg("Он.","other");
+        addMsg("И если он снова активен — всё плохо.","other");
       },1000);
     });
   }
 }
 
 /* ===== INIT ===== */
-renderChats();
-openChat("archive");
+if(state.mode) showList();
 </script>
+
 </body>
 </html>
