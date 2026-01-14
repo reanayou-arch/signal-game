@@ -3,41 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Сообщения</title>
+<title>LINEA</title>
 
 <style>
 body{
   margin:0;
   background:#0b0b0b;
   font-family:system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
+  color:#e5e5e5;
 }
-
 #app{
-  width:100%;
   max-width:420px;
-  height:100%;
+  margin:0 auto;
+  height:100vh;
   background:#111;
   display:flex;
-  flex-direction:column;
-  box-shadow:0 0 40px rgba(0,0,0,.8);
 }
 
-/* ===== HEADER ===== */
-#header{
-  padding:14px;
-  background:#1a1a1a;
-  color:#e5e5e5;
-  font-weight:600;
+/* ===== SIDEBAR ===== */
+#chats{
+  width:110px;
+  background:#0f0f0f;
+  border-right:1px solid #222;
+  overflow-y:auto;
+}
+.chatItem{
+  padding:10px;
   text-align:center;
-  border-bottom:1px solid #222;
+  cursor:pointer;
+  border-bottom:1px solid #1a1a1a;
+}
+.avatar{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  margin:0 auto 6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:600;
+  color:#000;
+}
+.chatName{
+  font-size:11px;
+  opacity:.8;
 }
 
 /* ===== CHAT ===== */
-#chat{
+#chatView{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+#header{
+  padding:12px;
+  background:#1a1a1a;
+  border-bottom:1px solid #222;
+  font-weight:600;
+}
+#messages{
   flex:1;
   padding:12px;
   overflow-y:auto;
@@ -45,73 +69,45 @@ body{
   flex-direction:column;
   gap:10px;
 }
-
-/* ===== MESSAGES ===== */
 .msg{
   max-width:80%;
   padding:10px 12px;
   border-radius:12px;
-  font-size:15px;
+  font-size:14px;
   line-height:1.4;
-  animation:fadeIn .3s ease;
 }
-
+.you{align-self:flex-end;background:#3a3a3a}
+.other{align-self:flex-start;background:#1f1f2f}
 .system{
-  background:#2a2a2a;
-  color:#ccc;
   align-self:center;
-  font-size:13px;
-  opacity:.8;
+  font-size:12px;
+  opacity:.6;
 }
 
-.other{
-  background:#1f1f2f;
-  color:#e5e5ff;
-  align-self:flex-start;
+/* typing */
+#typing{
+  padding:8px 12px;
+  font-size:12px;
+  opacity:.6;
+  display:none;
 }
 
-.you{
-  background:#3a3a3a;
-  color:#fff;
-  align-self:flex-end;
-}
-
-/* ===== CHOICES ===== */
+/* choices */
 #choices{
   padding:10px;
   border-top:1px solid #222;
-  background:#141414;
 }
-
 .choice{
   width:100%;
   padding:10px;
-  margin-top:8px;
+  margin-top:6px;
   background:#1e1e1e;
   color:#fff;
   border:none;
   border-radius:8px;
-  font-size:15px;
 }
 
-/* ===== EFFECTS ===== */
-@keyframes fadeIn{
-  from{opacity:0;transform:translateY(4px)}
-  to{opacity:1;transform:none}
-}
-
-.glitch{
-  animation:glitch .2s infinite;
-}
-@keyframes glitch{
-  0%{text-shadow:2px 0 red}
-  50%{text-shadow:-2px 0 cyan}
-  100%{text-shadow:none}
-}
-
-.shake{
-  animation:shake .4s infinite;
-}
+/* effects */
 @keyframes shake{
   0%{transform:translate(0,0)}
   25%{transform:translate(-2px,1px)}
@@ -119,48 +115,113 @@ body{
   75%{transform:translate(-1px,2px)}
   100%{transform:translate(0,0)}
 }
+.shake{animation:shake .4s infinite}
 </style>
 </head>
 <body>
 
 <div id="app">
-  <div id="header">Сообщения</div>
-  <div id="chat"></div>
-  <div id="choices"></div>
+  <div id="chats"></div>
+
+  <div id="chatView">
+    <div id="header">LINEA</div>
+    <div id="messages"></div>
+    <div id="typing">печатает…</div>
+    <div id="choices"></div>
+  </div>
 </div>
 
-<audio id="click" src="click.mp3"></audio>
-<audio id="bgm" src="music.mp3" loop></audio>
+<audio id="notif" src="click.mp3"></audio>
 
 <script>
-const chat=document.getElementById("chat");
-const choices=document.getElementById("choices");
-const header=document.getElementById("header");
-const click=document.getElementById("click");
-const bgm=document.getElementById("bgm");
+/* ===== STATE ===== */
+let state={
+  flags:{answeredUnknown:false},
+  currentChat:null
+};
 
-let musicStarted=false;
-
-function playClick(){
-  click.currentTime=0;
-  click.play();
-  if(!musicStarted){
-    bgm.volume=.4;
-    bgm.play();
-    musicStarted=true;
+const chatsData={
+  unknown:{
+    name:"Неизвестный",
+    color:"#ff6b6b",
+    messages:[
+      {from:"system",text:"03:17"},
+      {from:"other",text:"Ты снова здесь."}
+    ]
+  },
+  anya:{
+    name:"Аня",
+    color:"#6bc5ff",
+    messages:[
+      {from:"system",text:"2 года назад"},
+      {from:"other",text:"Если вдруг прочтёшь — не отвечай им."}
+    ]
+  },
+  archive:{
+    name:"Архив",
+    color:"#aaa",
+    messages:[
+      {from:"system",text:"Служебные сообщения"},
+      {from:"system",text:"Аккаунт восстановлен"}
+    ]
   }
+};
+
+const chatsEl=document.getElementById("chats");
+const header=document.getElementById("header");
+const messages=document.getElementById("messages");
+const choices=document.getElementById("choices");
+const typing=document.getElementById("typing");
+const notif=document.getElementById("notif");
+
+/* ===== UI ===== */
+function renderChats(){
+  chatsEl.innerHTML="";
+  Object.keys(chatsData).forEach(id=>{
+    const c=chatsData[id];
+    const div=document.createElement("div");
+    div.className="chatItem";
+    div.onclick=()=>openChat(id);
+
+    const av=document.createElement("div");
+    av.className="avatar";
+    av.style.background=c.color;
+    av.textContent=c.name[0];
+
+    const name=document.createElement("div");
+    name.className="chatName";
+    name.textContent=c.name;
+
+    div.append(av,name);
+    chatsEl.appendChild(div);
+  });
 }
 
-function addMsg(text,type="other"){
-  const div=document.createElement("div");
-  div.className="msg "+type;
-  div.textContent=text;
-  chat.appendChild(div);
-  chat.scrollTop=chat.scrollHeight;
-}
-
-function clearChoices(){
+function openChat(id){
+  state.currentChat=id;
+  const chat=chatsData[id];
+  header.textContent=chat.name;
+  messages.innerHTML="";
   choices.innerHTML="";
+  typing.style.display="none";
+
+  chat.messages.forEach(m=>addMsg(m.text,m.from));
+  messages.scrollTop=messages.scrollHeight;
+
+  storyRouter(id);
+}
+
+function addMsg(text,from){
+  const div=document.createElement("div");
+  div.className="msg "+from;
+  div.textContent=text;
+  messages.appendChild(div);
+  messages.scrollTop=messages.scrollHeight;
+}
+
+function showTyping(time=1000){
+  typing.style.display="block";
+  setTimeout(()=>typing.style.display="none",time);
 }
 
 function addChoice(text,action){
@@ -168,83 +229,47 @@ function addChoice(text,action){
   b.className="choice";
   b.textContent=text;
   b.onclick=()=>{
-    playClick();
-    clearChoices();
     addMsg(text,"you");
+    choices.innerHTML="";
     action();
   };
   choices.appendChild(b);
 }
 
-/* ===== STORY ===== */
+/* ===== STORY LOGIC ===== */
+function storyRouter(id){
+  if(id==="unknown" && !state.flags.answeredUnknown){
+    addChoice("Кто ты?",()=>{
+      state.flags.answeredUnknown=true;
+      showTyping(1200);
+      setTimeout(()=>{
+        addMsg("Ты уже задавал этот вопрос.","other");
+        notif.play();
+        chatsData.anya.messages.push(
+          {from:"other",text:"Он написал тебе, да?"}
+        );
+        renderChats();
+      },1200);
+    });
+    addChoice("Молчать",()=>{
+      addMsg("…","you");
+    });
+  }
 
-function start(){
-  header.textContent="Сообщения";
-  chat.innerHTML="";
-  addMsg("Подключение…","system");
-
-  setTimeout(()=>{
-    addMsg("Ты не должен был отвечать.","other");
-    addChoice("Кто это?",q1);
-    addChoice("…",q1);
-  },800);
+  if(id==="anya"){
+    addChoice("Что ты имеешь в виду?",()=>{
+      showTyping(1000);
+      setTimeout(()=>{
+        addMsg("LINEA не закрыли.","other");
+        addMsg("Просто убрали тех, кто отвечал.","other");
+      },1000);
+    });
+  }
 }
 
-function q1(){
-  addMsg("Ты здесь.","other");
-  addMsg("03:17","system");
-  addChoice("Где я?",q2);
-}
-
-function q2(){
-  addMsg("Ты всегда был здесь.","other");
-  header.classList.add("glitch");
-  addChoice("Хватит",q3);
-}
-
-function q3(){
-  header.textContent="Неизвестный";
-  header.classList.remove("glitch");
-  document.getElementById("app").classList.add("shake");
-
-  addMsg("Дверь можно открыть один раз.","other");
-  addChoice("Открыть дверь",chapter2);
-}
-
-function chapter2(){
-  document.getElementById("app").classList.remove("shake");
-  header.textContent="Сообщения";
-
-  addMsg("Соединение восстановлено","system");
-  addMsg("Ты больше не можешь говорить.","system");
-  addMsg("Но можешь читать.","other");
-
-  addChoice("Кто ты?",chapter3);
-}
-
-function chapter3(){
-  header.textContent="Ты";
-  addMsg("Мы — те, кто остался без чата.","other");
-  addMsg("Ты займёшь чьё-то место?","other");
-
-  addChoice("Да",badEnding);
-  addChoice("Нет",goodEnding);
-}
-
-function goodEnding(){
-  addMsg("Сеанс завершён.","system");
-  addMsg("Ты вышел.","system");
-  addChoice("Начать заново",start);
-}
-
-function badEnding(){
-  document.getElementById("app").classList.add("shake");
-  addMsg("Теперь ты — часть нас.","other");
-  addMsg("Чат не закрывается.","system");
-  addChoice("Начать заново",start);
-}
-
-start();
+/* ===== INIT ===== */
+renderChats();
+openChat("archive");
 </script>
 </body>
 </html>
