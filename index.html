@@ -3,293 +3,248 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Последний сигнал</title>
+<title>Сообщения</title>
 
 <style>
 body{
   margin:0;
-  background:#0a0a0a;
-  color:#e5e5e5;
-  font-family:"Courier New",monospace;
+  background:#0b0b0b;
+  font-family:system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   display:flex;
   justify-content:center;
   align-items:center;
-  min-height:100vh;
-  padding:10px;
+  height:100vh;
 }
-#game{
+
+#app{
   width:100%;
-  max-width:720px;
-  background:#121212;
-  border-radius:14px;
-  padding:20px;
-  box-shadow:0 0 30px rgba(0,0,0,.9);
-  position:relative;
+  max-width:420px;
+  height:100%;
+  background:#111;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 0 40px rgba(0,0,0,.8);
 }
-.text{
-  white-space:pre-line;
-  font-size:clamp(14px,4vw,18px);
-  line-height:1.55;
-}
-.chapter{
-  opacity:.6;
-  margin-bottom:8px;
-}
-button{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  font-size:clamp(14px,4vw,17px);
-  background:#1c1c1c;
+
+/* ===== HEADER ===== */
+#header{
+  padding:14px;
+  background:#1a1a1a;
   color:#e5e5e5;
-  border:1px solid #333;
+  font-weight:600;
+  text-align:center;
+  border-bottom:1px solid #222;
+}
+
+/* ===== CHAT ===== */
+#chat{
+  flex:1;
+  padding:12px;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+/* ===== MESSAGES ===== */
+.msg{
+  max-width:80%;
+  padding:10px 12px;
+  border-radius:12px;
+  font-size:15px;
+  line-height:1.4;
+  animation:fadeIn .3s ease;
+}
+
+.system{
+  background:#2a2a2a;
+  color:#ccc;
+  align-self:center;
+  font-size:13px;
+  opacity:.8;
+}
+
+.other{
+  background:#1f1f2f;
+  color:#e5e5ff;
+  align-self:flex-start;
+}
+
+.you{
+  background:#3a3a3a;
+  color:#fff;
+  align-self:flex-end;
+}
+
+/* ===== CHOICES ===== */
+#choices{
+  padding:10px;
+  border-top:1px solid #222;
+  background:#141414;
+}
+
+.choice{
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  background:#1e1e1e;
+  color:#fff;
+  border:none;
   border-radius:8px;
-}
-#musicBtn{
-  background:#262626;
-  margin-bottom:10px;
+  font-size:15px;
 }
 
-/* ===== HORROR EFFECTS ===== */
-
-@keyframes shake {
-  0%{transform:translate(0,0)}
-  20%{transform:translate(-3px,2px)}
-  40%{transform:translate(3px,-2px)}
-  60%{transform:translate(-2px,-1px)}
-  80%{transform:translate(2px,1px)}
-  100%{transform:translate(0,0)}
+/* ===== EFFECTS ===== */
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(4px)}
+  to{opacity:1;transform:none}
 }
-.shake{animation:shake .4s infinite}
 
-@keyframes flicker{
-  0%,100%{opacity:1}
-  50%{opacity:.4}
+.glitch{
+  animation:glitch .2s infinite;
 }
-.flicker{animation:flicker .15s infinite}
-
 @keyframes glitch{
   0%{text-shadow:2px 0 red}
-  25%{text-shadow:-2px 0 cyan}
-  50%{text-shadow:2px 0 magenta}
-  75%{text-shadow:-2px 0 lime}
+  50%{text-shadow:-2px 0 cyan}
   100%{text-shadow:none}
 }
-.glitch{animation:glitch .3s infinite}
 
-#overlay{
-  position:fixed;
-  inset:0;
-  background:radial-gradient(circle,transparent 40%,rgba(0,0,0,.85) 100%);
-  pointer-events:none;
-  opacity:0;
-  transition:.5s;
+.shake{
+  animation:shake .4s infinite;
 }
-#overlay.active{opacity:1}
+@keyframes shake{
+  0%{transform:translate(0,0)}
+  25%{transform:translate(-2px,1px)}
+  50%{transform:translate(2px,-1px)}
+  75%{transform:translate(-1px,2px)}
+  100%{transform:translate(0,0)}
+}
 </style>
 </head>
 <body>
 
-<div id="game">
-  <button id="musicBtn">🎵 Включить музыку</button>
-  <div class="chapter" id="chapter"></div>
-  <div class="text" id="text"></div>
+<div id="app">
+  <div id="header">Сообщения</div>
+  <div id="chat"></div>
   <div id="choices"></div>
 </div>
 
-<div id="overlay"></div>
-
-<audio id="bgm" loop src="music.mp3"></audio>
 <audio id="click" src="click.mp3"></audio>
+<audio id="bgm" src="music.mp3" loop></audio>
 
 <script>
-const chapterEl=document.getElementById("chapter");
-const textEl=document.getElementById("text");
-const choicesEl=document.getElementById("choices");
-const game=document.getElementById("game");
-const overlay=document.getElementById("overlay");
-
-const bgm=document.getElementById("bgm");
+const chat=document.getElementById("chat");
+const choices=document.getElementById("choices");
+const header=document.getElementById("header");
 const click=document.getElementById("click");
-const musicBtn=document.getElementById("musicBtn");
+const bgm=document.getElementById("bgm");
 
-let musicOn=false;
+let musicStarted=false;
 
-musicBtn.onclick=()=>{
-  if(!musicOn){
+function playClick(){
+  click.currentTime=0;
+  click.play();
+  if(!musicStarted){
     bgm.volume=.4;
     bgm.play();
-    musicBtn.textContent="🔇 Выключить музыку";
-    musicOn=true;
-  }else{
-    bgm.pause();
-    musicBtn.textContent="🎵 Включить музыку";
-    musicOn=false;
-  }
-};
-
-function playClick(){click.currentTime=0;click.play();}
-
-function clearEffects(){
-  game.className="";
-  textEl.className="text";
-  overlay.classList.remove("active");
-}
-
-function effects(type){
-  clearEffects();
-  if(type==="panic"){
-    game.classList.add("shake","flicker");
-    overlay.classList.add("active");
-  }
-  if(type==="glitch"){
-    textEl.classList.add("glitch");
-    overlay.classList.add("active");
+    musicStarted=true;
   }
 }
 
-function show(chapter,text,choices,effect){
-  clearEffects();
-  if(effect)effects(effect);
-  chapterEl.textContent=chapter;
-  textEl.textContent=text;
-  choicesEl.innerHTML="";
-  choices.forEach(c=>{
-    const b=document.createElement("button");
-    b.textContent=c.text;
-    b.onclick=()=>{
-      playClick();
-      c.action();
-    };
-    choicesEl.appendChild(b);
-  });
+function addMsg(text,type="other"){
+  const div=document.createElement("div");
+  div.className="msg "+type;
+  div.textContent=text;
+  chat.appendChild(div);
+  chat.scrollTop=chat.scrollHeight;
 }
 
-/* ===== ГЛАВЫ ===== */
-
-function chapter1(){
-show(
-"Глава 1. Комната",
-`Ты просыпаешься.
-03:17.
-
-Телефон загорается:
-«Ты не должен был отвечать.»`,
-[
-{text:"Посмотреть в окно",action:chapter1_window},
-{text:"Взять телефон",action:chapter1_phone}
-]);
+function clearChoices(){
+  choices.innerHTML="";
 }
 
-function chapter1_window(){
-show(
-"Глава 1. Комната",
-`В отражении — ты.
-Но оно не повторяет движений.`,
-[
-{text:"Обернуться",action:chapter1_phone}
-],
-"glitch");
+function addChoice(text,action){
+  const b=document.createElement("button");
+  b.className="choice";
+  b.textContent=text;
+  b.onclick=()=>{
+    playClick();
+    clearChoices();
+    addMsg(text,"you");
+    action();
+  };
+  choices.appendChild(b);
 }
 
-function chapter1_phone(){
-show(
-"Глава 1. Комната",
-`Сообщение:
-«Дверь можно открыть только один раз.»`,
-[
-{text:"Пойти к двери",action:chapter1_door}
-]);
+/* ===== STORY ===== */
+
+function start(){
+  header.textContent="Сообщения";
+  chat.innerHTML="";
+  addMsg("Подключение…","system");
+
+  setTimeout(()=>{
+    addMsg("Ты не должен был отвечать.","other");
+    addChoice("Кто это?",q1);
+    addChoice("…",q1);
+  },800);
 }
 
-function chapter1_door(){
-show(
-"Глава 1. Комната",
-`«Что ты готов оставить?»`,
-[
-{text:"Голос",action:chapter2},
-{text:"Память",action:badEnding}
-],
-"panic");
+function q1(){
+  addMsg("Ты здесь.","other");
+  addMsg("03:17","system");
+  addChoice("Где я?",q2);
 }
 
-/* ===== ГЛАВА 2 ===== */
+function q2(){
+  addMsg("Ты всегда был здесь.","other");
+  header.classList.add("glitch");
+  addChoice("Хватит",q3);
+}
+
+function q3(){
+  header.textContent="Неизвестный";
+  header.classList.remove("glitch");
+  document.getElementById("app").classList.add("shake");
+
+  addMsg("Дверь можно открыть один раз.","other");
+  addChoice("Открыть дверь",chapter2);
+}
 
 function chapter2(){
-show(
-"Глава 2. Город без голоса",
-`Ты выходишь в город.
-Ты жив.
-Но не можешь говорить.
+  document.getElementById("app").classList.remove("shake");
+  header.textContent="Сообщения";
 
-Тени запаздывают.`,
-[
-{text:"Следовать за тенью",action:chapter2_shadow},
-{text:"Раствориться в толпе",action:badEnding}
-]);
+  addMsg("Соединение восстановлено","system");
+  addMsg("Ты больше не можешь говорить.","system");
+  addMsg("Но можешь читать.","other");
+
+  addChoice("Кто ты?",chapter3);
 }
-
-function chapter2_shadow(){
-show(
-"Глава 2. Город без голоса",
-`Экран мигает:
-«МЫ ЖДАЛИ»`,
-[
-{text:"Коснуться экрана",action:chapter3}
-],
-"glitch");
-}
-
-/* ===== ГЛАВА 3 ===== */
 
 function chapter3(){
-show(
-"Глава 3. Последний сигнал",
-`«Ты можешь вернуть голос.
-Но займёшь чьё-то место.»`,
-[
-{text:"Принять",action:neutralEnding},
-{text:"Отказаться",action:goodEnding}
-],
-"panic");
-}
+  header.textContent="Ты";
+  addMsg("Мы — те, кто остался без чата.","other");
+  addMsg("Ты займёшь чьё-то место?","other");
 
-/* ===== КОНЦОВКИ ===== */
+  addChoice("Да",badEnding);
+  addChoice("Нет",goodEnding);
+}
 
 function goodEnding(){
-show(
-"Концовка",
-`Ты уходишь молча.
-Сигнал обрывается.`,
-[
-{text:"Начать заново",action:chapter1}
-]);
-}
-
-function neutralEnding(){
-show(
-"Концовка",
-`Ты снова говоришь.
-Где-то
-кто-то замолкает.`,
-[
-{text:"Начать заново",action:chapter1}
-],
-"glitch");
+  addMsg("Сеанс завершён.","system");
+  addMsg("Ты вышел.","system");
+  addChoice("Начать заново",start);
 }
 
 function badEnding(){
-show(
-"Концовка",
-`Сигнал поглощает тебя.
-Ты остался здесь.`,
-[
-{text:"Начать заново",action:chapter1}
-],
-"panic");
+  document.getElementById("app").classList.add("shake");
+  addMsg("Теперь ты — часть нас.","other");
+  addMsg("Чат не закрывается.","system");
+  addChoice("Начать заново",start);
 }
 
-chapter1();
+start();
 </script>
 </body>
 </html>
