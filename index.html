@@ -6,36 +6,114 @@
 <title>LINEA</title>
 
 <style>
-body{margin:0;background:#0b0b0b;color:#e5e5e5;font-family:system-ui}
-#app{max-width:420px;height:100vh;margin:0 auto;background:#111;display:flex;flex-direction:column}
+body{
+  margin:0;
+  background:#0b0b0b;
+  color:#e5e5e5;
+  font-family:system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+#app{
+  max-width:420px;
+  height:100vh;
+  margin:0 auto;
+  background:#111;
+  display:flex;
+  flex-direction:column;
+}
 
 /* header */
-#header{padding:14px;text-align:center;background:#1a1a1a;border-bottom:1px solid #222;font-weight:600}
+#header{
+  padding:14px;
+  text-align:center;
+  background:#1a1a1a;
+  border-bottom:1px solid #222;
+  font-weight:600;
+}
 
 /* screens */
 .screen{flex:1;display:none}
 .screen.active{display:flex;flex-direction:column}
 
+/* mode */
+.modeBtn{
+  margin:20px;
+  padding:14px;
+  font-size:16px;
+  background:#1e1e1e;
+  border:none;
+  border-radius:10px;
+  color:#fff;
+}
+
 /* chat list */
-.chatItem{display:flex;gap:10px;padding:12px;border-bottom:1px solid #1f1f1f;cursor:pointer}
-.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;color:#000}
+.chatItem{
+  display:flex;
+  gap:10px;
+  padding:12px;
+  border-bottom:1px solid #1f1f1f;
+  cursor:pointer;
+}
+.avatar{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:600;
+  color:#000;
+}
 .chatInfo{flex:1}
 .chatName{font-weight:500}
 .chatPreview{font-size:13px;opacity:.7}
 
-/* chat view */
-#chatHeader{display:flex;gap:10px;align-items:center;padding:12px;border-bottom:1px solid #222}
-#messages{flex:1;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
-.msg{max-width:80%;padding:10px 12px;border-radius:12px;font-size:14px}
+/* chat */
+#chatHeader{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  border-bottom:1px solid #222;
+}
+#messages{
+  flex:1;
+  padding:12px;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.msg{
+  max-width:80%;
+  padding:10px 12px;
+  border-radius:12px;
+  font-size:14px;
+  line-height:1.4;
+}
 .you{align-self:flex-end;background:#3a3a3a}
 .other{align-self:flex-start;background:#1f1f2f}
 .system{align-self:center;font-size:12px;opacity:.6}
-#typing{padding:6px 12px;font-size:12px;opacity:.6;display:none}
-#choices{padding:10px;border-top:1px solid #222}
-.choice{width:100%;padding:10px;margin-top:6px;background:#1e1e1e;color:#fff;border:none;border-radius:8px}
 
-/* mode screen */
-.modeBtn{margin:20px;padding:14px;background:#1e1e1e;border:none;border-radius:10px;color:#fff;font-size:16px}
+#typing{
+  padding:6px 12px;
+  font-size:12px;
+  opacity:.6;
+  display:none;
+}
+
+#choices{
+  padding:10px;
+  border-top:1px solid #222;
+}
+.choice{
+  width:100%;
+  padding:10px;
+  margin-top:6px;
+  background:#1e1e1e;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+}
 </style>
 </head>
 <body>
@@ -49,7 +127,7 @@ body{margin:0;background:#0b0b0b;color:#e5e5e5;font-family:system-ui}
     <button class="modeBtn" onclick="setMode('choices')">Готовые ответы</button>
   </div>
 
-  <!-- CHAT LIST -->
+  <!-- LIST -->
   <div id="listScreen" class="screen"></div>
 
   <!-- CHAT -->
@@ -66,24 +144,41 @@ body{margin:0;background:#0b0b0b;color:#e5e5e5;font-family:system-ui}
 
 <script>
 /* ===== STATE ===== */
-let state=JSON.parse(localStorage.getItem("linea"))||{
-  act:1,
-  mode:null
+let state = JSON.parse(localStorage.getItem("linea_state")) || {
+  act: 1,
+  mode: null,
+  flags: {}
 };
 
+function save(){
+  localStorage.setItem("linea_state", JSON.stringify(state));
+}
+
 /* ===== DATA ===== */
-const chats={
-  archive:{name:"Архив",color:"#aaa",messages:[
-    {from:"system",text:"Аккаунт восстановлен."},
-    {from:"system",text:"Последний вход: 03:17"}
-  ]},
-  unknown:{name:"Неизвестный",color:"#ff6b6b",messages:[
-    {from:"other",text:"Ты всё-таки вернулся."}
-  ]},
-  anya:{name:"Аня",color:"#6bc5ff",messages:[
-    {from:"system",text:"2 года назад"},
-    {from:"other",text:"Если вдруг прочтёшь — не отвечай им."}
-  ]}
+const chats = {
+  archive:{
+    name:"Архив",
+    color:"#aaa",
+    messages:[
+      {from:"system",text:"Аккаунт восстановлен."},
+      {from:"system",text:"Последний вход: 03:17"}
+    ]
+  },
+  unknown:{
+    name:"Неизвестный",
+    color:"#ff6b6b",
+    messages:[
+      {from:"other",text:"Ты всё-таки вернулся."}
+    ]
+  },
+  anya:{
+    name:"Аня",
+    color:"#6bc5ff",
+    messages:[
+      {from:"system",text:"2 года назад"},
+      {from:"other",text:"Если вдруг прочтёшь — не отвечай им."}
+    ]
+  }
 };
 
 /* ===== ELEMENTS ===== */
@@ -103,8 +198,6 @@ function setMode(m){
 }
 
 /* ===== UI ===== */
-function save(){localStorage.setItem("linea",JSON.stringify(state));}
-
 function showList(){
   modeScreen.classList.remove("active");
   chatScreen.classList.remove("active");
@@ -130,9 +223,10 @@ function openChat(id){
   chatScreen.classList.add("active");
   messagesEl.innerHTML="";
   choicesEl.innerHTML="";
+  typingEl.style.display="none";
   chatTitle.textContent=chats[id].name;
   chats[id].messages.forEach(m=>addMsg(m.text,m.from));
-  act1(id);
+  routeStory(id);
 }
 
 function back(){
@@ -165,28 +259,103 @@ function choice(text,fn){
   choicesEl.appendChild(b);
 }
 
+/* ===== STORY ROUTER ===== */
+function routeStory(id){
+  if(state.act===1) act1(id);
+  if(state.act===2) act2(id);
+  if(state.act===3) act3(id);
+}
+
 /* ===== ACT 1 ===== */
 function act1(id){
   if(id==="unknown"){
     choice("Кто ты?",()=>{
       showTyping(1200);
-      setTimeout(()=>addMsg("Ты уже задавал этот вопрос.","other"),1200);
+      setTimeout(()=>{
+        addMsg("Ты уже задавал этот вопрос.","other");
+        addMsg("Это нормально.","other");
+      },1200);
     });
-    if(state.mode==="choices") choice("…",()=>{});
+    if(state.mode==="choices"){
+      choice("…",()=>{
+        state.flags.silent=true;
+        save();
+      });
+    }
   }
+
   if(id==="anya"){
     choice("Кто написал?",()=>{
       showTyping(1000);
       setTimeout(()=>{
         addMsg("Он.","other");
-        addMsg("И если он снова активен — всё плохо.","other");
+        addMsg("Если он снова активен — всё плохо.","other");
+        state.act=2;
+        save();
       },1000);
     });
   }
 }
 
+/* ===== ACT 2 ===== */
+function act2(id){
+  if(id==="unknown"){
+    addMsg("Ты не помнишь, как всё закончилось?","other");
+    showTyping(1400);
+    setTimeout(()=>{
+      addMsg("Никто не помнит.","other");
+    },1400);
+  }
+
+  if(id==="archive"){
+    addMsg("Зафиксирована активность.","system");
+    showTyping(1200);
+    setTimeout(()=>{
+      addMsg("Некоторые данные могут быть утеряны.","system");
+    },1200);
+  }
+
+  if(id==="anya"){
+    addMsg("Он снова здесь, да?","other");
+    choice("Да",()=>{
+      addMsg("Тогда не отвечай ему долго.","other");
+      state.act=3;
+      save();
+    });
+    if(state.mode==="choices"){
+      choice("Не знаю",()=>{
+        addMsg("Ты знаешь.","other");
+        state.act=3;
+        save();
+      });
+    }
+  }
+}
+
+/* ===== ACT 3 ===== */
+function act3(id){
+  if(id==="unknown"){
+    addMsg("LINEA не хранит людей.","other");
+    showTyping(1200);
+    setTimeout(()=>{
+      addMsg("Она хранит разговоры.","other");
+    },1200);
+  }
+
+  if(id==="archive"){
+    addMsg("Обнаружено несоответствие данных.","system");
+  }
+
+  if(id==="anya"){
+    addMsg("Скажи честно.","other");
+    addMsg("Это писал ты?","other");
+  }
+}
+
 /* ===== INIT ===== */
-if(state.mode) showList();
+if(state.mode){
+  showList();
+}
 </script>
 
 </body>
